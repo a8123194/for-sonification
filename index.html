@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>for文 可聴化デモ</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 30px;
+        }
+
+        textarea {
+            width: 500px;
+            height: 180px;
+            font-size: 16px;
+        }
+
+        button {
+            font-size: 16px;
+            padding: 8px 20px;
+            margin-top: 10px;
+        }
+
+        #state {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            width: 500px;
+            min-height: 100px;
+            font-size: 18px;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>for文 可聴化デモ</h2>
+
+    <textarea id="code">var sum = 0;
+for(var i = 0; i < 10; i++){
+    sum += i;
+    console.log(sum);
+}</textarea>
+
+    <br><br>
+
+    <button id="run">実行</button>
+
+    <div id="state">
+        実行待ち
+    </div>
+
+
+    <script type="module">
+
+        import * as Tone from "https://cdn.skypack.dev/tone";
+
+
+        // -------------------------
+        // 音を作る
+        // -------------------------
+
+        // for開始時
+        const startSynth =
+            new Tone.PluckSynth().toDestination();
+
+        // ループ中
+        const loopSynth =
+            new Tone.Synth().toDestination();
+
+        // for終了時
+        const endSynth =
+            new Tone.MembraneSynth().toDestination();
+
+
+        // -------------------------
+        // i の値に対応する音高
+        // -------------------------
+
+        const notes = [
+            "C4",   // i = 0
+            "D4",   // i = 1
+            "E4",   // i = 2
+            "F4",   // i = 3
+            "G4",   // i = 4
+            "A4",   // i = 5
+            "B4",   // i = 6
+            "C5",   // i = 7
+            "D5",   // i = 8
+            "E5",   // i = 9
+            "F5"    // i = 10
+        ];
+
+
+        const state =
+            document.getElementById("state");
+
+
+        // -------------------------
+        // 待機
+        // -------------------------
+
+        function sleep(ms) {
+            return new Promise(resolve => {
+                setTimeout(resolve, ms);
+            });
+        }
+
+
+        // -------------------------
+        // 実行ボタン
+        // -------------------------
+
+        document
+            .getElementById("run")
+            .addEventListener("click", async () => {
+
+                await Tone.start();
+
+                const code =
+                    document.getElementById("code").value;
+
+
+                // -------------------------
+                // for文の開始値・終了値を取得
+                // -------------------------
+
+                const match = code.match(
+                    /for\s*\(\s*(?:let|var)\s+i\s*=\s*(\d+)\s*;\s*i\s*<\s*(\d+)/
+                );
+
+
+                if (!match) {
+
+                    state.innerHTML =
+                        "対応しているfor文ではありません";
+
+                    return;
+                }
+
+
+                const start =
+                    Number(match[1]);
+
+                const end =
+                    Number(match[2]);
+
+
+                // -------------------------
+                // for開始
+                // -------------------------
+
+                state.innerHTML =
+                    "<b>for開始</b>";
+
+
+                startSynth.triggerAttackRelease(
+                    "C5",
+                    "8n"
+                );
+
+
+                await sleep(800);
+
+
+                let sum = 0;
+
+
+                // -------------------------
+                // for文の実行
+                // -------------------------
+
+                for (
+                    let i = start;
+                    i < end;
+                    i++
+                ) {
+
+                    // sumを更新
+                    sum += i;
+
+
+                    // -------------------------
+                    // i → 音高
+                    // -------------------------
+
+                    const note =
+                        notes[
+                        Math.min(
+                            i,
+                            notes.length - 1
+                        )
+                        ];
+
+
+                    // -------------------------
+                    // ループの進行度
+                    // -------------------------
+
+                    let progress;
+
+                    if (end - start <= 1) {
+
+                        progress = 1;
+
+                    } else {
+
+                        progress =
+                            (i - start) /
+                            (end - start - 1);
+
+                    }
+
+
+                    // -------------------------
+                    // 発音間隔
+                    //
+                    // 最初 900ms
+                    // ↓
+                    // 最後 250ms
+                    // -------------------------
+
+                    const delay =
+                        900 -
+                        (650 * progress);
+
+
+                    // -------------------------
+                    // 画面表示
+                    // -------------------------
+
+                    state.innerHTML = `
+                        <b>現在の変数</b>
+                        <br><br>
+
+                        i = ${i}
+                        <br>
+
+                        sum = ${sum}
+
+                        <br><br>
+
+                      
+                    `;
+
+
+                    // -------------------------
+                    // iに対応する音を鳴らす
+                    // -------------------------
+
+                    loopSynth.triggerAttackRelease(
+                        note,
+                        "8n"
+                    );
+
+
+                    // 次の反復まで待つ
+                    await sleep(delay);
+
+                }
+
+
+                // -------------------------
+                // for終了
+                // -------------------------
+
+                state.innerHTML +=
+                    "<br><br><b>for終了</b>";
+
+
+                endSynth.triggerAttackRelease(
+                    "C3",
+                    "4n"
+                );
+
+            });
+
+    </script>
+
+</body>
+
+</html>
